@@ -2,7 +2,7 @@
  * 
  * Unit tests
  * 
- * (c) Chris Williams, 2020
+ * (c) Chris Williams, 2020.
  *
  * See LICENSE for usage and copying.
  */
@@ -51,23 +51,10 @@ fn add_byte()
 }
 
 #[test]
-fn add_be_word()
+fn add_word()
 {
     let mut b = crate::Bytes::new();
-    b.add_be_word(0xaabbccdd);
-
-    let s = b.as_slice();
-    assert_eq!(s[0], 0xaa);
-    assert_eq!(s[1], 0xbb);
-    assert_eq!(s[2], 0xcc);
-    assert_eq!(s[3], 0xdd);
-}
-
-#[test]
-fn add_le_word()
-{
-    let mut b = crate::Bytes::new();
-    b.add_le_word(0xaabbccdd);
+    b.add_word(0xaabbccdd);
 
     let s = b.as_slice();
     assert_eq!(s[0], 0xdd);
@@ -77,7 +64,7 @@ fn add_le_word()
 }
 
 #[test]
-fn read_be_word()
+fn read_word()
 {
     let mut b = crate::Bytes::new();
     b.add_byte(0x11);
@@ -85,32 +72,39 @@ fn read_be_word()
     b.add_byte(0x33);
     b.add_byte(0x44);
 
-    assert_eq!(b.read_be_word(0).unwrap(), 0x11223344);
-
     b.add_byte(0x55);
     b.add_byte(0x66);
     b.add_byte(0x77);
     b.add_byte(0x88);
 
-    assert_eq!(b.read_be_word(4).unwrap(), 0x55667788);
-    assert_eq!(b.read_be_word(2).unwrap(), 0x33445566);
+    assert_eq!(b.read_word(0).unwrap(), 0x44332211);
+    assert_eq!(b.read_word(4).unwrap(), 0x88776655);
+    assert_eq!(b.read_word(2).unwrap(), 0x66554433);
 }
 
 #[test]
-fn read_le_word()
+fn from_slice()
+{
+    let values = [0, 2, 4, 6, 8];
+    let b = crate::Bytes::from_slice(&values);
+    assert_eq!(b.read_byte(0).unwrap(), 0);
+    assert_eq!(b.read_byte(1).unwrap(), 2);
+    assert_eq!(b.read_byte(2).unwrap(), 4);
+    assert_eq!(b.read_byte(3).unwrap(), 6);
+    assert_eq!(b.read_byte(4).unwrap(), 8);
+}
+
+#[test]
+fn read_byte()
 {
     let mut b = crate::Bytes::new();
-    b.add_byte(0x11);
-    b.add_byte(0x22);
-    b.add_byte(0x33);
-    b.add_byte(0x44);
+    b.add_byte(0xaa);
+    b.add_byte(0xbb);
+    b.add_byte(0xcc);
+    b.add_byte(0xdd);
 
-    b.add_byte(0x55);
-    b.add_byte(0x66);
-    b.add_byte(0x77);
-    b.add_byte(0x88);
-
-    assert_eq!(b.read_le_word(0).unwrap(), 0x44332211);
-    assert_eq!(b.read_le_word(4).unwrap(), 0x88776655);
-    assert_eq!(b.read_le_word(2).unwrap(), 0x66554433);
+    assert_eq!(b.read_byte(0).unwrap(), 0xaa);
+    assert_eq!(b.read_byte(1).unwrap(), 0xbb);
+    assert_eq!(b.read_byte(2).unwrap(), 0xcc);
+    assert_eq!(b.read_byte(3).unwrap(), 0xdd);
 }

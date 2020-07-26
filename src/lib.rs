@@ -1,9 +1,10 @@
 /* Byte and multi-byte access to memory
  * 
  * This does not require the standard library,
- * though it does require a dynamic allocator to create binary structures.
+ * though it does require a dynamic allocator
+ * to create binary structures.
  * 
- * (c) Chris Williams, 2020
+ * (c) Chris Williams, 2020.
  *
  * See LICENSE for usage and copying.
  */
@@ -18,19 +19,51 @@ use core::mem::size_of;
 #[cfg(test)]
 mod tests;
 
-struct Bytes
+pub enum Ordering
 {
+    LittleEndian,
+    BigEndian
+}
+
+pub struct Bytes
+{
+    ordering: Ordering,
     data: Vec<u8>
 }
 
 impl Bytes
 {
+    /* create a new, empty Bytes object, ordering defaults to host ordering */
     pub fn new() -> Bytes
     {
         Bytes
         {
+            ordering: if cfg!(target_endian = "little")
+            {
+                Ordering::LittleEndian
+            }
+            else
+            {
+                Ordering::BigEndian
+            },
             data: Vec::<u8>::new()
         }
+    }
+
+    /* set the byte ordering for the data in memory. this data is automatically converted from
+    the host ordering to the chosen in-memory ordering when writing, and from the chosen
+    in-memory ordering to the host ordering when reading. the default is the host's ordering. */
+    pub fn set_ordering(&mut self, order: Ordering)
+    {
+        self.ordering = order;
+    }
+
+    /* create a new Bytes object and copy in the given byte slice */
+    pub fn from_slice(bytes: &[u8]) -> Bytes
+    {
+        let mut b = Bytes::new();
+        b.data = bytes.to_vec();
+        return b;
     }
 
     /* access the data as a borrowed immutable slice */
@@ -46,57 +79,59 @@ impl Bytes
     }
 
     /* add a byte to the end of the array */
-    pub fn add_byte(&mut self, val: u8)
+    pub fn add_byte(&mut self, value: u8)
     {
-        self.data.push(val);
+        self.data.push(value);
     }
 
-    /* add a 32-bit big endian word to the end of the array */
-    pub fn add_be_word(&mut self, val: u32)
-    {
-        self.add_byte(((val >> 24) & 0xff) as u8);
-        self.add_byte(((val >> 16) & 0xff) as u8);
-        self.add_byte(((val >>  8) & 0xff) as u8);
-        self.add_byte(((val >>  0) & 0xff) as u8);
-    }
-
-    /* add a 32-bit little endian word to the end of the array */
-    pub fn add_le_word(&mut self, val: u32)
-    {
-        self.add_byte(((val >>  0) & 0xff) as u8);
-        self.add_byte(((val >>  8) & 0xff) as u8);
-        self.add_byte(((val >> 16) & 0xff) as u8);
-        self.add_byte(((val >> 24) & 0xff) as u8);
-    }
-
-    /* read a 32-bit big endian word from the given byte offset,
+    /* read a byte from the given byte offset,
     or None if offset is out of bounds */
-    pub fn read_be_word(&self, offset: usize) -> Option<u32>
+    pub fn read_byte(&self, offset: usize) -> Option<u8>
     {
-        match self.read_le_word_at_offset(offset)
+        if offset >= self.len()
         {
-            None => return None,
-            Some(v) =>
+            return None;
+        }
+
+        Some(self.data[offset])
+    }
+
+    /* add a 32-bit word to the end of the array */
+    pub fn add_word(&mut self, value: u32)
+    {
+        /* handling byte ordering */
+        if cfg!(target_endian = "little")
+        {
+            /* and self.ordering is the order of the data saved in memory */
+            let ordered = match self.ordering
             {
-                let value = (v & 0xff000000) >> 24 |
-                            (v & 0x00ff0000) >>  8 |
-                            (v & 0x0000ff00) <<  8 |
-                            (v & 0x000000ff) << 24;
-                return Some(value);
-            }
+                Ordering::LittleEndian => value,
+                Ordering::BigEndian => value.swap_bytes()
+            };
+
+            self.add_byte(((ordered >>  0) & 0xff) as u8);
+            self.add_byte(((ordered >>  8) & 0xff) as u8);
+            self.add_byte(((ordered >> 16) & 0xff) as u8);
+            self.add_byte(((ordered >> 24) & 0xff) as u8);
+        }
+        else
+        {
+            let ordered = match self.ordering
+            {
+                Ordering::LittleEndian => value.swap_bytes(),
+                Ordering::BigEndian => value
+            };
+
+            self.add_byte(((ordered >> 24) & 0xff) as u8);
+            self.add_byte(((ordered >> 16) & 0xff) as u8);
+            self.add_byte(((ordered >>  8) & 0xff) as u8);
+            self.add_byte(((ordered >>  0) & 0xff) as u8);
         }
     }
 
-    /* read a 32-bit little endian word from the given byte offset,
+    /* read a 32-bit word from the given byte offset,
     or None if offset is out of bounds */
-    pub fn read_le_word(&self, offset: usize) -> Option<u32>
-    {
-        return self.read_le_word_at_offset(offset);
-    }
-
-    /* read a 32-bit little endian word from the given byte offset,
-    or None if offset is out of bounds */
-    fn read_le_word_at_offset(&self, offset: usize) -> Option<u32>
+    pub fn read_word(&self, offset: usize) -> Option<u32>
     {
         if (offset + size_of::<u32>()) > self.len()
         {
@@ -108,7 +143,9 @@ impl Bytes
                     (array[offset + 1] as u32) <<  8 |
                     (array[offset + 2] as u32) << 16 |
                     (array[offset + 3] as u32) << 24;
+
+        
+
         return Some(value);
     }
 }
-
