@@ -55,12 +55,17 @@ fn add_word()
 {
     let mut b = crate::Bytes::new();
     b.add_word(0xaabbccdd);
+    b.add_word(0x11223344);
 
     let s = b.as_slice();
     assert_eq!(s[0], 0xdd);
     assert_eq!(s[1], 0xcc);
     assert_eq!(s[2], 0xbb);
     assert_eq!(s[3], 0xaa);
+    assert_eq!(s[4], 0x44);
+    assert_eq!(s[5], 0x33);
+    assert_eq!(s[6], 0x22);
+    assert_eq!(s[7], 0x11);
 }
 
 #[test]
