@@ -55,10 +55,7 @@ impl Bytes
     /* set the byte ordering for the data in memory. this data is automatically converted from
     the host ordering to the chosen in-memory ordering when writing, and from the chosen
     in-memory ordering to the host ordering when reading. the default is the host's ordering. */
-    pub fn set_ordering(&mut self, order: Ordering)
-    {
-        self.ordering = order;
-    }
+    pub fn set_ordering(&mut self, order: Ordering) { self.ordering = order }
 
     /* create a new Bytes object and copy in the given byte slice */
     pub fn from_slice(bytes: &[u8]) -> Bytes
@@ -69,22 +66,16 @@ impl Bytes
     }
 
     /* access the data as a borrowed immutable slice */
-    pub fn as_slice(&self) -> &[u8]
-    {
-        return self.data.as_slice();
-    }
+    pub fn as_slice(&self) -> &[u8] { self.data.as_slice() }
+
+    /* clone the data as a vector */
+    pub fn as_vec(&self) -> Vec<u8> { self.data.clone() }
 
     /* return the length of the array in bytes */
-    pub fn len(&self) -> usize
-    {
-        return self.data.len();
-    }
+    pub fn len(&self) -> usize { self.data.len() }
 
     /* add a byte to the end of the array */
-    pub fn add_byte(&mut self, value: u8)
-    {
-        self.data.push(value);
-    }
+    pub fn add_byte(&mut self, value: u8) { self.data.push(value) }
 
     /* read a byte from the given byte offset,
     or None if offset is out of bounds */
