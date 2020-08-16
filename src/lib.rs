@@ -4,6 +4,8 @@
  * though it does require a dynamic allocator
  * to create binary structures.
  * 
+ * Not thread safe: access Bytes exclusively.
+ * 
  * (c) Chris Williams, 2020.
  *
  * See LICENSE for usage and copying.
@@ -88,12 +90,11 @@ impl Bytes
     or None if offset is out of bounds */
     pub fn read_byte(&self, offset: usize) -> Option<u8>
     {
-        if offset >= self.len()
+        match self.data.get(offset)
         {
-            return None;
+            Some(byte) => Some(*byte),
+            None => None
         }
-
-        Some(self.data[offset])
     }
 
     /* add a 32-bit word to the end of the array */
@@ -133,19 +134,19 @@ impl Bytes
     or None if offset is out of bounds */
     pub fn read_word(&self, offset: usize) -> Option<u32>
     {
-        if (offset + size_of::<u32>()) > self.len()
+        match self.data.get(offset..(offset + size_of::<u32>()))
         {
-            return None;
+            Some(bytes) =>
+            {
+                Some
+                (
+                    (bytes[0] as u32) <<  0 |
+                    (bytes[1] as u32) <<  8 |
+                    (bytes[2] as u32) << 16 |
+                    (bytes[3] as u32) << 24
+                )
+            },
+            None => None
         }
-
-        let array = self.data.as_slice();
-        let value = (array[offset + 0] as u32) <<  0 |
-                    (array[offset + 1] as u32) <<  8 |
-                    (array[offset + 2] as u32) << 16 |
-                    (array[offset + 3] as u32) << 24;
-
-        
-
-        return Some(value);
     }
 }
