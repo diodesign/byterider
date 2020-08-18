@@ -21,6 +21,8 @@ use core::mem::size_of;
 #[cfg(test)]
 mod tests;
 
+/* define the byte ordering of the data stored in memory */
+#[derive(Clone, Copy)]
 pub enum Ordering
 {
     LittleEndian,
@@ -88,56 +90,110 @@ impl Bytes
         }
     }
 
-    /* add a 32-bit word to the end of the array */
+    /* add a 32-bit word to the end of the array.
+    value = host-ordered word to write into memory using array's ordering */
     pub fn add_word(&mut self, value: u32)
     {
-        /* handling byte ordering */
-        if cfg!(target_endian = "little")
-        {
-            /* and self.ordering is the order of the data saved in memory */
-            let ordered = match self.ordering
-            {
-                Ordering::LittleEndian => value,
-                Ordering::BigEndian => value.swap_bytes()
-            };
+        assert_eq!(value, value);
 
-            self.add_byte(((ordered >>  0) & 0xff) as u8);
-            self.add_byte(((ordered >>  8) & 0xff) as u8);
-            self.add_byte(((ordered >> 16) & 0xff) as u8);
-            self.add_byte(((ordered >> 24) & 0xff) as u8);
-        }
-        else
+        match self.ordering
         {
-            let ordered = match self.ordering
+            Ordering::LittleEndian =>
             {
-                Ordering::LittleEndian => value.swap_bytes(),
-                Ordering::BigEndian => value
-            };
+                self.add_byte(((value >>  0) & 0xff) as u8);
+                self.add_byte(((value >>  8) & 0xff) as u8);
+                self.add_byte(((value >> 16) & 0xff) as u8);
+                self.add_byte(((value >> 24) & 0xff) as u8);
+            },
 
-            self.add_byte(((ordered >> 24) & 0xff) as u8);
-            self.add_byte(((ordered >> 16) & 0xff) as u8);
-            self.add_byte(((ordered >>  8) & 0xff) as u8);
-            self.add_byte(((ordered >>  0) & 0xff) as u8);
+            Ordering::BigEndian =>
+            {
+                self.add_byte(((value >> 24) & 0xff) as u8);
+                self.add_byte(((value >> 16) & 0xff) as u8);
+                self.add_byte(((value >>  8) & 0xff) as u8);
+                self.add_byte(((value >>  0) & 0xff) as u8);
+            }
         }
     }
 
     /* read a 32-bit word from the given byte offset,
+    converting the ordering in memory to the host ordering.
     or None if offset is out of bounds */
     pub fn read_word(&self, offset: usize) -> Option<u32>
     {
-        match self.data.get(offset..(offset + size_of::<u32>()))
+        Some(match self.data.get(offset..(offset + size_of::<u32>()))
         {
             Some(bytes) =>
             {
-                Some
-                (
-                    (bytes[0] as u32) <<  0 |
-                    (bytes[1] as u32) <<  8 |
-                    (bytes[2] as u32) << 16 |
-                    (bytes[3] as u32) << 24
-                )
+                match self.ordering
+                {
+                    Ordering::LittleEndian =>
+                    {
+                        (bytes[0] as u32) <<  0 |
+                        (bytes[1] as u32) <<  8 |
+                        (bytes[2] as u32) << 16 |
+                        (bytes[3] as u32) << 24
+                    },
+
+                    Ordering::BigEndian =>
+                    {
+                        (bytes[0] as u32) << 24 |
+                        (bytes[1] as u32) << 16 |
+                        (bytes[2] as u32) <<  8 |
+                        (bytes[3] as u32) <<  0
+                    }
+                }
             },
-            None => None
+            None => return None
+        })
+    }
+
+    /* alter a byte in the array at the given offset.
+    returns true if successful, or false if out of bounds */
+    pub fn alter_byte(&mut self, offset: usize, new_value: u8) -> bool
+    {
+        match self.data.get_mut(offset)
+        {
+            Some(ptr) =>
+            {
+                *ptr = new_value;
+                true
+            },
+            None => false
         }
+    }
+
+    /* alter a 32-bit word in the array at the given offset.
+    new_value = host-ordered word to write into memory using array's ordering
+    returns true if successful, or false if out of bounds */
+    pub fn alter_word(&mut self, offset: usize, new_value: u32) -> bool
+    {
+        match self.data.get_mut(offset..(offset + size_of::<u32>()))
+        {
+            Some(ptr) =>
+            {
+                match self.ordering
+                {
+                    Ordering::LittleEndian =>
+                    {
+                        ptr[0] = ((new_value >>  0) & 0xff) as u8;
+                        ptr[1] = ((new_value >>  8) & 0xff) as u8;
+                        ptr[2] = ((new_value >> 16) & 0xff) as u8;
+                        ptr[3] = ((new_value >> 24) & 0xff) as u8;
+                    },
+
+                    Ordering::BigEndian =>
+                    {
+                        ptr[0] = ((new_value >> 24) & 0xff) as u8;
+                        ptr[1] = ((new_value >> 16) & 0xff) as u8;
+                        ptr[2] = ((new_value >>  8) & 0xff) as u8;
+                        ptr[3] = ((new_value >>  0) & 0xff) as u8;
+                    }
+                };
+
+                true
+            },
+            None => false
+        }           
     }
 }
