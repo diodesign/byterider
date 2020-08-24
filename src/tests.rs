@@ -52,6 +52,72 @@ fn len()
 }
 
 #[test]
+fn offset32()
+{
+    assert_eq!(populate_bytes().offset32(), BYTE_FILL_SIZE as u32);
+}
+
+#[test]
+fn offset64()
+{
+    assert_eq!(populate_bytes().offset64(), BYTE_FILL_SIZE as u64);
+}
+
+#[test]
+fn add_string()
+{
+    let mut b = crate::Bytes::new();
+    b.add_string("hello");
+
+    assert_eq!(b.read_u8(0), Some('h' as u8));
+    assert_eq!(b.read_u8(1), Some('e' as u8));
+    assert_eq!(b.read_u8(2), Some('l' as u8));
+    assert_eq!(b.read_u8(3), Some('l' as u8));
+    assert_eq!(b.read_u8(4), Some('o' as u8));
+}
+
+#[test]
+fn add_null_terminator()
+{
+    let mut b = crate::Bytes::new();
+    b.add_null_terminator();
+    assert_eq!(b.read_u8(0), Some(0));
+}
+
+#[test]
+fn add_null_term_string()
+{
+    let mut b = crate::Bytes::new();
+    b.add_null_term_string("hello");
+    assert_eq!(b.read_u8(5), Some(0));
+}
+
+#[test]
+fn pad_to_u32()
+{
+    for i in 0..10
+    {
+        let mut b = crate::Bytes::new();
+        for _ in 0..i
+        {
+            b.add_u8(0);
+        }
+        b.pad_to_u32();
+        
+        let expected_size = if i % size_of::<u32>() == 0
+        {
+            i
+        }
+        else
+        {
+            i + (size_of::<u32>() - (i % size_of::<u32>()))
+        };
+
+        assert_eq!(b.len(), expected_size);
+    }
+}
+
+#[test]
 fn add_u8()
 {
     let b = populate_bytes();

@@ -130,10 +130,14 @@ impl Bytes
     pub fn pad_to_u32(&mut self)
     {
         let word_size = size_of::<u32>();
-        let padding = self.data.len();
-        for _ in 0..(word_size - (padding % word_size))
+        let data_size = self.data.len();
+        let difference = data_size % word_size;
+        if difference > 0
         {
-            self.data.push(0);       
+            for _ in 0..(word_size - difference)
+            {
+                self.data.push(0);       
+            }
         }
     }
 
