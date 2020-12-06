@@ -16,6 +16,7 @@
 
 extern crate alloc;
 use alloc::vec::Vec;
+use alloc::string::String;
 use core::mem::size_of;
 
 #[cfg(test)]
@@ -126,6 +127,32 @@ impl Bytes
         self.add_null_terminator();
     }
 
+    /* read a null-terminated string as a sequence of bytes from
+    offset in the byte stream, or None if it's not possible */
+    pub fn read_null_term_string(&self, mut offset: usize) -> Option<String>
+    {
+        let mut s = String::new();
+        loop
+        {
+            match self.read_u8(offset)
+            {
+                /* keep going until we hit the null byte */
+                Some(b) => if b != 0
+                {
+                    s.push(b as char);
+                }
+                else
+                {
+                    return Some(s)
+                },
+                /* give up if we run off the end of the stream */
+                None => return None
+            }
+
+            offset = offset + 1;
+        }
+    }
+
     /* zero pad a byte array to the nearest whole 32-bit word */
     pub fn pad_to_u32(&mut self)
     {
@@ -139,6 +166,18 @@ impl Bytes
                 self.data.push(0);       
             }
         }
+    }
+
+    /* if offset is 32-bit aligned, return it. otherwise,
+    round up to next 32-bit boundary and return that */
+    pub fn align_to_next_u32(offset: usize) -> usize
+    {
+        if offset & 0b11 == 0
+        {
+            return offset;
+        }
+
+        (offset & !0b11) + 4
     }
 
     /* add a byte to the end of the array */
