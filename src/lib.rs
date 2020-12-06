@@ -270,6 +270,30 @@ impl Bytes
         }
     }
 
+    /* read a 32 or 64-bit word depending on the host architecture's data width:
+    calls down to read_u32() or read_u64() as appropriate, or returns None if
+    unable to determine the size of usize */
+    pub fn read_usize(&self, offset: usize) -> Option<usize>
+    {
+        if size_of::<usize>() == size_of::<u32>()
+        {
+            return match self.read_u32(offset)
+            {
+                Some(v) => Some(v as usize),
+                None => None
+            };
+        } else if size_of::<usize>() == size_of::<u64>()
+        {
+            return match self.read_u64(offset)
+            {
+                Some(v) => Some(v as usize),
+                None => None
+            };
+        }
+
+        None
+    }
+
     /* alter a byte in the array at the given offset.
     returns true if successful, or false if out of bounds */
     pub fn alter_u8(&mut self, offset: usize, new_value: u8) -> bool
@@ -329,5 +353,20 @@ impl Bytes
             },
             None => false
         }           
+    }
+
+    /* alter a 32 or 64-bit word depending on the host architecture's
+    data width. calls down to alter_u32() or alter_u64(), respectively */
+    pub fn alter_usize(&mut self, offset: usize, new_value: usize) -> bool
+    {
+        if size_of::<usize>() == size_of::<u32>()
+        {
+            return self.alter_u32(offset, new_value as u32);
+        } else if size_of::<usize>() == size_of::<u64>()
+        {
+            return self.alter_u64(offset, new_value as u64);
+        }
+
+        false
     }
 }
