@@ -168,6 +168,21 @@ impl Bytes
         }
     }
 
+    /* zero pad a byte array to the nearest whole 64-bit word */
+    pub fn pad_to_u64(&mut self)
+    {
+        let word_size = size_of::<u64>();
+        let data_size = self.data.len();
+        let difference = data_size % word_size;
+        if difference > 0
+        {
+            for _ in 0..(word_size - difference)
+            {
+                self.data.push(0);       
+            }
+        }
+    }
+
     /* if offset is 32-bit aligned, return it. otherwise,
     round up to next 32-bit boundary and return that */
     pub fn align_to_next_u32(offset: usize) -> usize
@@ -178,6 +193,18 @@ impl Bytes
         }
 
         (offset & !0b11) + 4
+    }
+
+    /* if offset is 64-bit aligned, return it. otherwise,
+    round up to next 64-bit boundary and return that */
+    pub fn align_to_next_u64(offset: usize) -> usize
+    {
+        if offset & 0b111 == 0
+        {
+            return offset;
+        }
+
+        (offset & !0b111) + 8
     }
 
     /* add a byte to the end of the array */
