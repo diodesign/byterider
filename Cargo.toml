@@ -1,5 +1,5 @@
 [package]
 name = "byterider"
 version = "0.0.1"
-authors = ["Chris Williams <diosix@tuta.io>"]
+authors = ["Chris Williams <chrisw@diosix.org>"]
 edition = "2018"
